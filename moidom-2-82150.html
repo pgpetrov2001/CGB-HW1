@@ -47,6 +47,7 @@
             const wall_material = new THREE.MeshPhongMaterial( {color:'beige'} );
             const wall_thickness = 0.2;
             function create_wall(length, x, y, z, front) {
+            length -= 0.4;
                 let geometry;
                 if (front) {
                     geometry = new THREE.BoxGeometry( length, 5, wall_thickness );
@@ -60,23 +61,28 @@
                 scene.add(wall);
             }
 
-            let currx = 0, currz = -4.1;
+            let currx = 0, currz = -3.9;
             create_wall(8.4, currx, 0, currz, true);
-            currx += 4.1;
+            currx += 3.9;
             currz += 1;
             create_wall(2.2, currx, 0, currz, false);
             currx += 1.5;
             currz += 1;
-            create_wall(3.2, currx, 0, currz, true);
+            create_wall(3.6, currx, 0, currz, true);
             currx += 1.5;
-            currz += 4.1;
+            currz += 3.9;
             create_wall(8.4, currx, 0, currz, false);
-            currx -= 5.6;
-            currz += 4.1;
+            currx -= 5.4;
+            currz += 3.9;
             create_wall(11.4, currx, 0, currz, true);
-            currx -= 5.6;
-            currz -= 5.1;
-            create_wall(10.4, currx, 0, currz, false);
+            currx -= 5.4;
+            currz -= 4.9;
+            create_wall(10.1, currx, 0, currz, false);
+
+            let screen_geometry = new THREE.Box(0.8, 0.4, 0.05);
+            let screen_material = new THREE.MeshPhongMaterial( {color: 'black'} );
+            let screen = new THREE.Mesh(screen_geometry, screen_material);
+            scene.add(screen);
 			
 		</script>
 		
