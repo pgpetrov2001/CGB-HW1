@@ -1,0 +1,86 @@
+﻿<!DOCTYPE html>
+
+<!-- Име Фамилиев, група X, ф.н. XXXXX -->
+
+<html>
+	<head>
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<script src="three.min.js"></script>
+		<script src="OrbitControls.js"></script>
+	</head>
+	
+	<body>
+		<script>
+			const FN = 82150; // факултетен номер 
+		</script>
+		
+		<script src="init.js"></script>
+			
+		<script>
+		
+			// 1. преименувайте файла на moidom-g-fn.html
+			//    g=номер на група, а fn=факултетен номер
+			//
+			// 2. сменете стойността на константата FN да
+			//    е факултетния номер, за да се генерират
+			//    сцената, земята и контурът на къщата ви
+			//
+
+			// 3. едва тогава почвайте да строите стените
+			//    и да добавяте исканите обекти по стаите
+			//
+			// 4. init.js се създава глобален обект scene
+			//    и в него трябва да сложите обектите си!
+			//
+			// 5. кубът по-долу е само за пример как може
+			//    да се слагат обекти в сцената
+			
+			/*var geometry = new THREE.BoxGeometry( 2, 2, 2 ),
+				material = new THREE.MeshPhongMaterial( {color:'crimson', shininess: 100} );
+				
+			var cube = new THREE.Mesh( geometry, material );
+				cube.position.set( 0, 1, 0 );
+				cube.receiveShadow = true;
+				cube.castShadow = true;
+			
+			scene.add( cube );*/
+            const wall_material = new THREE.MeshPhongMaterial( {color:'beige'} );
+            const wall_thickness = 0.2;
+            function create_wall(length, x, y, z, front) {
+                let geometry;
+                if (front) {
+                    geometry = new THREE.BoxGeometry( length, 5, wall_thickness );
+                    } else {
+                    geometry = new THREE.BoxGeometry( wall_thickness, 5, length );
+                    }
+                let wall = new THREE.Mesh( geometry, wall_material );
+                wall.position.set(x, y, z);
+                wall.receiveShadow = true;
+                wall.castShadow = true;
+                scene.add(wall);
+            }
+
+            let currx = 0, currz = -4.1;
+            create_wall(8.4, currx, 0, currz, true);
+            currx += 4.1;
+            currz += 1;
+            create_wall(2.2, currx, 0, currz, false);
+            currx += 1.5;
+            currz += 1;
+            create_wall(3.2, currx, 0, currz, true);
+            currx += 1.5;
+            currz += 4.1;
+            create_wall(8.4, currx, 0, currz, false);
+            currx -= 5.6;
+            currz += 4.1;
+            create_wall(11.4, currx, 0, currz, true);
+            currx -= 5.6;
+            currz -= 5.1;
+            create_wall(10.4, currx, 0, currz, false);
+			
+		</script>
+		
+	</body>
+</html>
+
+
