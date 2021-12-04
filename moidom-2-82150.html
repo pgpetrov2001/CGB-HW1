@@ -1,92 +1,374 @@
 ﻿<!DOCTYPE html>
 
-<!-- Име Фамилиев, група X, ф.н. XXXXX -->
+<!-- Петър Петров, група 2, ф.н. 82150 -->
 
 <html>
-	<head>
-		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
-		<script src="three.min.js"></script>
-		<script src="OrbitControls.js"></script>
-	</head>
-	
-	<body>
-		<script>
-			const FN = 82150; // факултетен номер 
-		</script>
-		
-		<script src="init.js"></script>
-			
-		<script>
-		
-			// 1. преименувайте файла на moidom-g-fn.html
-			//    g=номер на група, а fn=факултетен номер
-			//
-			// 2. сменете стойността на константата FN да
-			//    е факултетния номер, за да се генерират
-			//    сцената, земята и контурът на къщата ви
-			//
+    <head>
+        <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+        <script src="three.min.js"></script>
+        <script src="OrbitControls.js"></script>
+        <script src="CSG.js"></script>
+    </head>
 
-			// 3. едва тогава почвайте да строите стените
-			//    и да добавяте исканите обекти по стаите
-			//
-			// 4. init.js се създава глобален обект scene
-			//    и в него трябва да сложите обектите си!
-			//
-			// 5. кубът по-долу е само за пример как може
-			//    да се слагат обекти в сцената
-			
-			/*var geometry = new THREE.BoxGeometry( 2, 2, 2 ),
-				material = new THREE.MeshPhongMaterial( {color:'crimson', shininess: 100} );
-				
-			var cube = new THREE.Mesh( geometry, material );
-				cube.position.set( 0, 1, 0 );
-				cube.receiveShadow = true;
-				cube.castShadow = true;
-			
-			scene.add( cube );*/
-            const wall_material = new THREE.MeshPhongMaterial( {color:'beige'} );
-            const wall_thickness = 0.2;
-            function create_wall(length, x, y, z, front) {
-            length -= 0.4;
-                let geometry;
+    <body>
+        <script>
+            const FN = 82150; // факултетен номер 
+        </script>
+
+        <script src="init.js"></script>
+
+        <!-- objects from assignment -->
+        <script>
+
+            //radius of top of legen, radius of bottom, height, ...
+            function makeLegen(rt, rb, h, thickness, color) {
+                const material = new THREE.MeshLambertMaterial({
+                    color: color, 
+                    side: THREE.DoubleSide,
+                });
+
+                let legen = new THREE.Group();
+                const segs1 = 60, segs2 = 30;
+                const thetaStart = Math.PI/2 - 0.05;
+                //const thetaLen = 0.39;
+                const thetaLen = Math.PI - Math.asin(rb/rt * Math.sin(thetaStart)) - thetaStart;
+
+                let outerBody = new THREE.Mesh(new THREE.SphereGeometry(
+                    1,
+                    segs1,
+                    segs2,
+                    0,
+                    2*Math.PI,
+                    thetaStart,
+                    thetaLen
+                ), material);
+
+                let innerBody = outerBody.clone();
+                const innerRad = (Math.sin(thetaStart) - thickness)/Math.sin(thetaStart);
+                innerBody.scale.set(innerRad,1,innerRad);
+                legen.add(innerBody);
+                legen.add(outerBody);
+
+                const legenTopY = Math.cos(thetaStart);
+                const topInnerRad = Math.sin(thetaStart) * innerRad;
+                const topOuterRad = Math.sin(thetaStart);
+
+                const rb_before_scale = Math.sin(thetaStart+thetaLen);
+                const factor = rb / rb_before_scale;
+
+                let profile = new THREE.Shape();
+                profile.moveTo(topInnerRad, legenTopY);
+                const outerBoundary = topOuterRad + thickness*7/factor;
+                profile.bezierCurveTo(
+                    outerBoundary,
+                    legenTopY,
+                    outerBoundary,
+                    legenTopY,
+                    outerBoundary,
+                    legenTopY - (outerBoundary - topOuterRad)
+                );
+                profile.bezierCurveTo(
+                    outerBoundary - thickness/2,
+                    legenTopY - (outerBoundary - topOuterRad),
+                    outerBoundary - thickness/2,
+                    legenTopY - (outerBoundary - topOuterRad),
+                    outerBoundary - thickness/2,
+                    legenTopY - thickness/2
+                );
+                profile.lineTo(
+                    topOuterRad,
+                    legenTopY - thickness
+                );
+                lip = new THREE.Mesh(new THREE.LatheGeometry(profile.extractPoints().shape, segs1), material);
+                legen.add(lip);
+
+                const bottom_thickness = thickness/2;
+                let bottom = new THREE.Mesh(new THREE.CylinderGeometry(
+                    rb_before_scale,
+                    rb_before_scale,
+                    bottom_thickness,
+                    segs1
+                ), material);
+                bottom.position.y = Math.cos(thetaStart+thetaLen);
+                legen.add(bottom);
+
+                const hfactor = (h - bottom_thickness/2)/(legenTopY-bottom.position.y);
+                legen.scale.set(factor, hfactor, factor);
+                legen.position.set(0, - hfactor * (bottom.position.y + legenTopY) / 2, 0);
+                legen.material = material;
+                return legen;
+            } // legen end
+
+            function makeTV(inches, aspect, rotation) {
+                const cms = inches * 2.54;
+                const angle = Math.atan(1/aspect);
+                const wide = Math.cos(angle)*cms;
+                const high = Math.sin(angle)*cms;
+                console.log(wide,high);
+
+                const mountThickness = 0.002;
+                let mount = new THREE.Mesh( 
+                    new THREE.BoxGeometry(wide*1.2, high*1.2, mountThickness),
+                    new THREE.MeshBasicMaterial(
+                        {color:'rgb(5,5,5)'}
+                    )
+                );
+                const tolerance = 0.03;
+                const screenDepth = 0.07;
+                let screen = new THREE.Mesh(
+                    new THREE.CylinderGeometry(high, high * 0.7, screenDepth, 4),
+                    new THREE.MeshLambertMaterial(
+                        {color:'rgb(60,60,60)'}
+                    )
+                );
+                screen.rotation.y += Math.PI / 4;
+                screen.rotation.x += Math.PI / 2;
+                screen.scale.set(aspect, 1, 1);
+                screen.position.z = - screenDepth / 2;
+                mount.position.z = - screenDepth - mountThickness / 2 - tolerance;
+
+                let curve = new THREE.Shape();
+                curve.moveTo(wide, 0);
+                const smooth = 6;
+                const dt = (2*Math.PI) / 100;
+                for (let t=0; t<2*Math.PI; t+=dt) {
+                    curve.lineTo(
+                        (wide + 0.05) * Math.pow(Math.cos(2*Math.PI*t), 2/smooth),
+                        (high + 0.05) * Math.pow(Math.sin(2*Math.PI*t), 2/smooth),
+                    );
+                }
+                const extrudeSettings = { depth: 1,  steps: 10};
+                let frame = new THREE.Mesh(
+                    new THREE.ExtrudeGeometry(curve, extrudeSettings),
+                    new THREE.MeshPhongMaterial(
+                        {color:'gray'}
+                    )
+                );
+                screen.position.z += 0.01;
+                let csg = new CSG();
+                csg.subtract([frame,screen]);
+                frame = csg.toMesh();
+                screen.position.z -= 0.01;
+
+                let TV = new THREE.Group();
+                TV.add(screen);
+                TV.add(frame);
+                TV.add(mount);
+
                 if (front) {
-                    geometry = new THREE.BoxGeometry( length, 5, wall_thickness );
-                    } else {
-                    geometry = new THREE.BoxGeometry( wall_thickness, 5, length );
-                    }
-                let wall = new THREE.Mesh( geometry, wall_material );
-                wall.position.set(x, y, z);
-                wall.receiveShadow = true;
-                wall.castShadow = true;
-                scene.add(wall);
+                    return TV;
+                } 
+                TV.rotation.y += rotation;
+                return TV;
             }
+        </script>
+                <script>
 
-            let currx = 0, currz = -3.9;
-            create_wall(8.4, currx, 0, currz, true);
-            currx += 3.9;
-            currz += 1;
-            create_wall(2.2, currx, 0, currz, false);
-            currx += 1.5;
-            currz += 1;
-            create_wall(3.6, currx, 0, currz, true);
-            currx += 1.5;
-            currz += 3.9;
-            create_wall(8.4, currx, 0, currz, false);
-            currx -= 5.4;
-            currz += 3.9;
-            create_wall(11.4, currx, 0, currz, true);
-            currx -= 5.4;
-            currz -= 4.9;
-            create_wall(10.1, currx, 0, currz, false);
+                    // 1. преименувайте файла на moidom-g-fn.html
+                    //    g=номер на група, а fn=факултетен номер
+                    //
+                    // 2. сменете стойността на константата FN да
+                    //    е факултетния номер, за да се генерират
+                    //    сцената, земята и контурът на къщата ви
+                    //
 
-            let screen_geometry = new THREE.Box(0.8, 0.4, 0.05);
+                    // 3. едва тогава почвайте да строите стените
+                    //    и да добавяте исканите обекти по стаите
+                    //
+                    // 4. init.js се създава глобален обект scene
+                    //    и в него трябва да сложите обектите си!
+                    //
+                    // 5. кубът по-долу е само за пример как може
+                    //    да се слагат обекти в сцената
+
+                    /*var geometry = new THREE.BoxGeometry( 2, 2, 2 ),
+                    material = new THREE.MeshPhongMaterial( {color:'crimson', shininess: 100} );
+
+            var cube = new THREE.Mesh( geometry, material );
+                cube.position.set( 0, 1, 0 );
+                cube.receiveShadow = true;
+                cube.castShadow = true;
+
+            scene.add( cube );*/
+                    const wall_material = new THREE.MeshPhongMaterial( {color:'beige'} );
+                    const wallThicknesss = 0.2;
+                    const wallHeight = 3;
+                    var walls = [];
+
+                    function create_wall(length, x, z, front) {
+                        const y = wallHeight/2;
+                        let geometry;
+                        if (front) {
+                            geometry = new THREE.BoxGeometry( length, wallHeight, wallThicknesss );
+                        } else {
+                            geometry = new THREE.BoxGeometry( wallThicknesss, wallHeight, length );
+                        }
+                        let wall = new THREE.Mesh( geometry, wall_material );
+                        wall.position.set(x, y, z);
+                        //wall.receiveShadow = true;
+                        //wall.castShadow = true;
+                        walls.push(wall);
+                    }
+
+                    let currx = 0, currz = -3.9, front = true;
+                    create_wall(8, currx, currz, front);
+                    currx += 3.9;
+                    currz += 1;
+                    front = !front;
+                    create_wall(1.8, currx, currz, front);
+                    currx += 1.5;
+                    currz += 1;
+                    front = !front;
+                    create_wall(3.2, currx, currz, front);
+                    currx += 1.5;
+                    currz += 3.9;
+                    front = !front;
+                    create_wall(8, currx, currz, front);
+                    currx -= 5.4;
+                    currz += 3.9;
+                    front = !front;
+                    create_wall(11, currx, currz, front);
+                    currx -= 5.4;
+                    currz -= 4.9;
+                    front = !front;
+                    create_wall(9.7, currx, currz, front);
+
+                    function broadSide_front(element) {
+                        const broadSide = Math.max(element.geometry.parameters.width, element.geometry.parameters.depth);
+                        const front = broadSide > element.geometry.parameters.depth;
+                        return [broadSide, front];
+                    }
+                    walls = walls.map(wall => {
+                        let csg = new CSG();
+                        let hole;
+                        const [broadSide, front] = broadSide_front(wall);
+                        const holeWidth = broadSide / 5;
+                        const holeHeight = wallHeight / 2;
+                        if (front) {
+                            hole = new THREE.Mesh( new THREE.BoxGeometry(holeWidth, holeHeight, wallThicknesss) );
+                        } else {
+                            hole = new THREE.Mesh( new THREE.BoxGeometry(wallThicknesss, holeHeight, holeWidth) );
+                        }
+                        hole.position.x = wall.position.x;
+                        hole.position.y = wall.position.y;
+                        hole.position.z = wall.position.z;
+                        //addWindow(hole);
+                        //addFrame(hole);
+                        csg.subtract([wall, hole]);
+                        let ret = csg.toMesh(); 
+                        //ret.castShadow = true;
+                        return ret;
+                    });
+                    let newPos = walls[4].position;
+                    newPos.x = walls[4].position.x;
+                    newPos.z = walls[3].position.z;
+                    create_wall(walls[0].position.x, walls[4].position.x, walls[3].position.z)
+
+                    // create_wall(walls[0].x)
+
+                    for (let wall of walls) {
+                        scene.add(wall);
+                    }
+
+                    //             function addDoor(hole) {
+                    //                 const broadSide = Math.max(hole.geometry.parameters.width, hole.geometry.parameters.depth);
+                    //                 const front = broadSide > hole.geometry.parameters.depth;
+                    //                 const doorThickness = wallThicknesss / 2;
+                    //                 const doorHeight = hole.geometry.parameters.height;
+                    //                 let door;
+                    //                 if (front) {
+                    //                     door = new THREE.Mesh( new THREE.BoxGeometry(broadSide, doorHeight, doorThickness) );
+                    //                 } else {
+                    //                     door = new THREE.Mesh( new THREE.BoxGeometry(doorThickness, broadSide, doorHeight) );
+                    //                 }
+                    //                 door.material = new THREE.MeshB
+                    //                 scene.add(door);
+                    //             }
+
+                    function addWindow(hole) {
+                        const [broadSide, front] = broadSide_front(hole);
+                        const windowHeight = hole.geometry.parameters.height;
+                        const windowThickness = wallThicknesss / 4;
+                        let window;
+                        let material = new THREE.MeshBasicMaterial( {transparent: true, opacity: 0.3, color: 'cyan'} );
+                        if (front) {
+                            window = new THREE.Mesh( new THREE.BoxGeometry(broadSide, windowHeight, windowThickness), material );
+                        } else {
+                            window = new THREE.Mesh( new THREE.BoxGeometry(windowThickness, windowHeight, broadSide), material );
+                        }
+                        Object.assign(window.position, hole.position);
+                        scene.add(window);
+                    }
+                    function addFrame(hole) {
+                        hole = hole.clone();
+                        const [broadSide, front] = broadSide_front(hole);
+                        const frameWidth = broadSide * 1.2;
+                        const frameHeight = hole.geometry.parameters.height * 1.3;
+                        const frameThickness = wallThicknesss * 1.3;
+                        let pane;
+                        let csg = new CSG();
+                        if (front) {
+                            pane = new THREE.Mesh( new THREE.BoxGeometry(frameWidth, frameHeight, frameThickness) );
+                            hole.scale.set(1, 1, frameThickness / wallThicknesss);
+                        } else {
+                            pane = new THREE.Mesh( new THREE.BoxGeometry(frameThickness, frameHeight, frameWidth) );
+                            hole.scale.set(frameThickness / wallThicknesss, 1, 1);
+                        }
+                        Object.assign(pane.position, hole.position);
+                        csg.subtract([pane, hole]);
+                        //hole.material = new THREE.MeshBasicMaterial( {color: 'red'} );
+                        //scene.add(pane, hole);
+                        let frame = csg.toMesh();
+                        frame.material = new THREE.MeshBasicMaterial( {'color': 'lightgray'} )
+                        scene.add(frame);
+                    }
+
+                    const n = 10;
+                    const rtExample = 0.343/2;
+                    const rbExample = 0.26/2;
+                    const hExample = 0.165;
+                    const thExample = 0.002;
+                    for (let i=0; i<n; i++) {
+                        const hue = Math.random() * 360;
+                        const height = hExample + Math.random()*0.05;
+                        let legen = makeLegen(
+                            rtExample + Math.random()*0.1,
+                            rbExample + Math.random()*0.1,
+                            height,
+                            0.002 + Math.random()*0.001,
+                            new THREE.Color(`hsl(${hue}, 100%, 50%)`)
+                        );
+                        //use += because makeLegen centers it by setting its position so that the center of the legen is at (0,0,0)
+                        legen.position.y += height / 2;
+                        legen.position.x += Math.random()*7 - 2.5;
+                        legen.position.z += Math.random()*6 - 2;
+                        scene.add(legen);
+                    }
+
+                    let TV = makeTV(0.30, 16/9, true);
+                    TV.position.y = 5;
+                    scene.add(TV);
+                    //legen at home
+                    //let legen = makeLegen(0.343/2,0.26/2,0.165,0.002,'yellow');
+                    //legen.position.y += 0.08;
+                    //scene.add(legen);
+                    //recommended to try with your own legen at home
+
+                    //scene.add(makeLegen(0.5, 0.3, 0.3, 0.02, 'green'));
+
+                    /*let screen_geometry = new THREE.Box(0.8, 0.4, 0.05);
             let screen_material = new THREE.MeshPhongMaterial( {color: 'black'} );
             let screen = new THREE.Mesh(screen_geometry, screen_material);
-            scene.add(screen);
-			
-		</script>
-		
-	</body>
+            scene.add(screen);*/
+
+                    /*let screen_geometry = new THREE.Box(0.8, 0.4, 0.05);
+            let screen_material = new THREE.MeshPhongMaterial( {color: 'black'} );
+            let screen = new THREE.Mesh(screen_geometry, screen_material);
+            scene.add(screen);*/
+
+                </script>
+
+    </body>
 </html>
 
 
