@@ -108,7 +108,7 @@
                 const wide = Math.cos(angle)*cms;
                 const high = Math.sin(angle)*cms;
 
-                const mountThickness = 0.002;
+                const mountThickness = 0.005;
                 let mount = new THREE.Mesh( 
                     new THREE.BoxGeometry(wide*1.2, high*1.2, mountThickness),
                     new THREE.MeshBasicMaterial(
@@ -137,7 +137,7 @@
                 mount.position.z = - screenDepth - mountThickness / 2 - tolerance;
 
                 let curve = new THREE.Shape();
-                curve.moveTo(wide, 0);
+                curve.moveTo(wide + 0.07, 0);
                 const smooth = 18;
                 const dt = (2*Math.PI) / 100;
                 for (let t=0; t<2*Math.PI; t+=dt) {
@@ -146,7 +146,7 @@
                         (high + 0.07) * Math.pow(Math.abs(Math.sin(t)), 2/smooth) * Math.sign(Math.sin(t)),
                     );
                 }
-                curve.lineTo(wide,0);
+                curve.lineTo(wide + 0.07, 0);
                 const extrudeSettings = { depth: 0.01,  steps: 1, bevelEnabled: false};
                 let frame = new THREE.Mesh(
                     new THREE.ExtrudeGeometry(curve, extrudeSettings),
@@ -181,8 +181,8 @@
                 TV.add(stud);
                 TV.add(stud2);
 
-                TV.position.x = -mount.position.x+mountThickness;
-                TV.position.y = -mount.position.y+mountThickness;
+                TV.position.x = -mount.position.x;
+                TV.position.y = -mount.position.y;
                 TV.position.z = -mount.position.z+mountThickness;
                 return TV;
             }
@@ -310,8 +310,12 @@ scene.add( cube );*/
                 walls.push(wall);
             }
 
+            /*walls of the house*/
+            /********************/
+            /********************/
             let currx = 0, currz = -3.9, front = true;
-            create_wall(8, currx, currz, front, false);
+            create_wall(4, currx-4/2, currz, front, false);
+            create_wall(4, currx+4/2, currz, front, false);
             currx += 3.9;
             currz += 1;
             front = !front;
@@ -320,45 +324,73 @@ scene.add( cube );*/
             currz += 1;
             front = !front;
             create_wall(3.2, currx, currz, front, false);
+
+            create_wall(11-4, 3.5, currz+4.8, front, true);
+
             currx += 1.5;
-            currz += 3.9;
+            currz += 2.3;
             front = !front;
-            create_wall(8, currx, currz, front, false);
+            create_wall(4.8, currx, currz, front, false);
+            currz += 4;
+            create_wall(3.2, currx, currz, front, false);
             currx -= 5.4;
-            currz += 3.9;
+            currz += 1.5;
             front = !front;
-            create_wall(11, currx, currz, front, false);
+            create_wall(11-4, currx+4/2, currz, front, false);
+            create_wall(4, currx-11/2+4/2, currz, front, false);
+
+            create_wall(4, currx-11/2+4/2, -3.9+2+5.5, front, true);
+
             currx -= 5.4;
             currz -= 4.9;
             front = !front;
             create_wall(9.7, currx, currz, front, false);
 
-            let specialWall = walls[0].clone();
+            currx += 3.8;
+            currz = -3.9 + 1;
+            create_wall(1.8, currx, currz, front, true);
+            currz += 0.9 + (9.7-1.8)/2;
+            create_wall(9.7-1.8, currx, currz, front, true);
+
+            let specialWall = new THREE.Mesh(new THREE.BoxGeometry(
+                walls[0].geometry.parameters.width + walls[1].geometry.parameters.width, 
+                wallHeight,
+                wallThicknesss
+            ), wall_material);
             specialWall.position.set(0,0,0);
             const squish = 0.5;
             specialWall.scale.set(squish, 1, 1);
             const wallAngle = Math.PI/24;
             specialWall.rotation.y += wallAngle;
-            specialWall.position.copy(walls[0].position);
+            specialWall.position.set(
+                (walls[0].position.x + walls[1].position.x)/2,
+                walls[0].position.y,
+                walls[0].position.z,
+            );
             specialWall.position.z += 2;
             specialWall.position.z += squish*specialWall.geometry.parameters.width * Math.sin(wallAngle) / 2;
-            specialWall.position.x += walls[0].geometry.parameters.width / 2 - Math.cos(wallAngle) * squish*specialWall.geometry.parameters.width / 2;
+            specialWall.position.x += specialWall.geometry.parameters.width / 2 - Math.cos(wallAngle) * squish*specialWall.geometry.parameters.width / 2;
             scene.add(specialWall);
+            /********************/
+            /********************/
+            /*walls of the house*/
 
-            let TV = makeTV(0.30, 16/9);
-            //TV.position.set(0,0,0);
+            let TV = makeTV(0.40, 21/9);
             TV.rotation.y = wallAngle;
-            //TV.position.y = 1.8;
             TV.position.x += specialWall.position.x;
             TV.position.y += specialWall.position.y;
             TV.position.z += specialWall.position.z;
             TV.position.z += (wallThicknesss / 2) * Math.cos(wallAngle);
             TV.position.x += (wallThicknesss / 2) * Math.sin(wallAngle);
-            //TV.position.x = specialWall.position.x;
-            //TV.position.z = specialWall.position.z;
-            //TV.position.x += Math.cos(wallAngle) * wallThicknesss;
-            //TV.position.z += Math.sin(wallAngle) * wallThicknesss;
             scene.add(TV);
+
+            let TV2 = makeTV(0.25, 16/9)
+            TV2.rotation.y = -Math.PI/2;
+            TV2.position.x += walls[walls.length-1].position.x;
+            TV2.position.x -= wallThicknesss;
+            TV2.position.x -= 0.1;
+            TV2.position.y += walls[0].position.y;
+            scene.add(TV2);
 
             walls = walls.map((wall) => {
                 let csg = new CSG();
@@ -410,7 +442,7 @@ scene.add( cube );*/
 
 
             //disperse legens
-            const n = 10;
+            const n = 20;
             const rtExample = 0.343/2;
             const rbExample = 0.26/2;
             const hExample = 0.165;
@@ -420,15 +452,15 @@ scene.add( cube );*/
                 const height = hExample + Math.random()*0.05;
                 let legen = makeLegen(
                     rtExample + Math.random()*0.1,
-                    rbExample + Math.random()*0.1,
+                    rbExample + Math.random()*Math.min(0.1, rtExample-rbExample),
                     height,
                     0.002 + Math.random()*0.001,
                     new THREE.Color(`hsl(${hue}, 100%, 50%)`)
                 );
                 //use += because makeLegen centers it by setting its position so that the center of the legen is at (0,0,0)
                 legen.position.y += height / 2;
-                legen.position.x += Math.random()*7 - 2.5;
-                legen.position.z += Math.random()*6 - 2;
+                legen.position.x += Math.random()*8 - 2.5;
+                legen.position.z += Math.random()*8 - 2;
                 scene.add(legen);
             }
             //legen at home
